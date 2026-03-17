@@ -1,10 +1,10 @@
-#read dune-tintin/lib/general.tin;
-#read dune-tintin/lib/looper.tin;
-#read dune-tintin/lib/loops.tin;
-#read dune-tintin/lib/mobs.tin;
+#read lib/general.tin;
+#read lib/looper.tin;
+#read lib/loops.tin;
+#read lib/mobs.tin;
 
 #nop
 #nop Pull in your character
 #nop
 
-#read dune-tintin/characters/example.tin;
+#read characters/example.tin;

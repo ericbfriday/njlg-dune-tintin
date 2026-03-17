@@ -1,0 +1,388 @@
+﻿Comprehensive Integration Manual for Autonomous Agents in the DuneMUD Environment
+1. Architectural Overview and Interface Protocols
+1.1. The Nature of the Environment
+The DuneMUD environment represents a persistent, text-based simulation running on the LDMud driver (specifically version 3.6.x).1 Unlike graphical MMORPGs where state is rendered via geometry and textures, the DuneMUD reality is constructed entirely through ASCII text streams. For an autonomous agent (LLM), this necessitates a shift from visual processing to high-speed natural language understanding and structured data parsing. The universe is modeled on Frank Herbert’s Dune series, diverging significantly from the high-fantasy tropes of standard Multi-User Dungeons (MUDs). There are no elves or magic; instead, the agent must navigate a landscape defined by psionics, feudal politics, and harsh survival mechanics.2
+The simulation consists of over 30,000 discrete nodes (rooms) spanning eight planetary systems.2 Time is discrete rather than continuous, advancing in "rounds" that typically span two seconds of real-time.4 This temporal quantization is the fundamental clock cycle for the agent. Any instruction set provided to the LLM must account for this tick rate to prevent "flooding" the server with commands that cannot be processed within a single round, or conversely, failing to react to a hostile state change within the appropriate window.
+1.2. Connection Protocols and Security
+To interface with the simulation, the agent establishes a TCP connection. The standard entry point is dunemud.net on port 6789, with a secure TLS option available on port 6788.5
+For autonomous agents, the negotiation of Telnet options is a critical initial handshake. As of October 2024, DuneMUD supports Telnet EOR (End of Record).5 This protocol is vital for the agent's delimitation logic. Without EOR, the agent must rely on heuristic prompt detection (e.g., waiting for a > character), which is prone to error during periods of high network latency or "lag." EOR allows the server to explicitly signal the end of a data burst, permitting the agent to process the complete state update with certainty before generating a response.
+1.3. Out-of-Band Data: The GMCP Standard
+Relying solely on the unstructured text stream (e.g., "The soldier hits you!") is computationally expensive and introduces latency. To mitigate this, DuneMUD implements the Generic Mud Communication Protocol (GMCP), which transmits JSON-formatted metadata invisibly alongside the display text.6 This structured data stream is the agent's primary sensory input for maintaining state awareness.
+The agent must be configured to parse the following JSON modules, which update asynchronously:
+1.3.1. Character Vitals Module (Char.Vitals)
+This module provides the immediate physiological state of the avatar. The agent must monitor these values to trigger survival subroutines.
+Field
+	Data Type
+	Description
+	Implications for Agent Logic
+	hp
+	Integer
+	Current Hit Points
+	Primary survival metric. If hp / maxhp < 0.4, initiate healing or retreat protocols.
+	sp
+	Integer
+	Command Points (CP)
+	"Mana" or Stamina. Required for special attacks. If sp is low, the agent must switch to low-cost basic attacks.
+	string
+	String
+	Composite display
+	Redundant string for display purposes (e.g., "H:123/200"). Agents should prefer raw integers.
+	This data allows for precise thresholding. For example, a Fremen agent might monitor specific sub-fields for water and adrenaline levels, which are critical for maintaining combat effectiveness in the deep desert.7
+1.3.2. Room Information Module (Room.Info)
+Spatial awareness is maintained through this module. Unlike text descriptions, which may be repetitive (e.g., "Desert Sand"), the GMCP data provides unique hash identifiers for every node in the 30,000-room graph.
+Field
+	Data Type
+	Description
+	Implications for Agent Logic
+	num
+	String/Hash
+	Unique Room ID
+	The node identifier for the agent's internal map graph.
+	name
+	String
+	Short Description
+	Context for the location (e.g., "Arrakeen Shuttle Port").
+	exits
+	Dictionary
+	Available paths
+	A key-value pair of directions and destination hashes (e.g., {"n": "hash123"}).
+	The agent must interpret the exits dictionary to construct a directed graph of the environment. This enables pathfinding algorithms (like A* or Dijkstra) to function efficiently, allowing the agent to navigate from point A to point B without "hallucinating" exits based on flowery room descriptions.6
+1.3.3. Status and Variables (Char.Status)
+This module tracks long-term progression metrics.
+* xp: Current experience points.
+* maxxp: The threshold for the next level.
+* guild: The character's class affiliation.
+* money: Liquid assets (Solaris) carried.
+The agent uses this data to make high-level strategic decisions, such as "Return to town to bank money" when money exceeds a risk threshold, or "Visit trainer" when xp approaches maxxp.6
+1.4. Command Parsing and Syntax
+The agent interacts with the world via natural language commands, which the engine parses into actions. The syntax is generally <verb> <noun>, but nuance is required for complex interactions.
+* Sequence Command (seq): This is a critical tool for autonomous agents to manage latency. The seq command allows the agent to queue multiple actions to be executed server-side, one per round.
+   * Syntax: seq <cmd1>,<cmd2>,<cmd3>
+   * Example: seq look,listen,,kill soldier.4
+   * Agent Strategy: The double comma ,, inserts a delay (an idle round). This is useful for waiting for global cooldowns or pacing attacks to synchronize with tick timers. The agent should utilize seq to bundle initialization routines upon login or entering a new area.7
+* Targeting Logic: In rooms with multiple identical entities (e.g., three "Harkonnen Guards"), the agent must use indexing.
+   * Syntax: kill guard 2 targets the second guard in the list.
+   * Logic: The agent should parse the room contents list and assign ephemeral IDs to targets to ensure it focuses fire on a single entity rather than spreading damage inefficiently.
+________________
+2. Character Definition and Metric Analysis
+2.1. The Concept of "Race" and Origin
+DuneMUD deviates from the Dungeons & Dragons standard of racial selection (Elf, Dwarf, Halfling). Instead, a character's "race" is functionally determined by their Guild Affiliation and Planet of Origin. The biological baseline for all characters is human, but this humanity is often altered by genetic manipulation (Tleilaxu), cybernetic augmentation (Ixian), or extreme conditioning (Bene Gesserit).2
+Therefore, during the character creation phase, the agent should not query for "race" in the traditional sense. The primary selection criteria are Gender and Handedness.
+* Gender: This is a hard constraint for certain high-level guilds.
+   * Female: Required for Bene Gesserit, Fish Speakers, and Honored Matres.
+   * Male: Required for Tleilaxu and Warriors.
+   * Neutral/Any: Atreides, Harkonnen, Fremen, Sardaukar, IMG.
+* Handedness: Determines the primary weapon slot. An agent configured as "Right-handed" suffers penalties when wielding weapons in the left hand unless the Offhand fight skill is trained.8
+2.2. Primary Attributes (Stats)
+The efficacy of an agent's actions is governed by six primary statistics. Unlike many RPGs where stats are static, in DuneMUD they can be trained using experience points (XP) and are capped by the character's level and guild constraints.
+
+
+Attribute
+	Abbr
+	Functionality for Autonomous Agents
+	Strength
+	STR
+	Load & Damage: Determines max_carry weight. An agent with low STR cannot loot heavy items (like spice harvesters or heavy armor). It also scales damage for melee guilds like Harkonnen and Sardaukar.4
+	Constitution
+	CON
+	Survivability: Directly correlates to total Hit Points (HP). For "tank" behavior profiles, maximizing CON is the highest priority. It also dictates how much food (e.g., "slices") the agent can consume before becoming full.4
+	Intelligence
+	INT
+	Resource Pool: Determination of Command Points (CP). High INT allows for longer chains of special attacks (e.g., voice, rage). It represents mental stamina.4
+	Wisdom
+	WIS
+	Progression Velocity: Affects the XP gain formula. An agent optimizing for rapid leveling should prioritize WIS early. It also impacts offensive/defensive combat calculations.4
+	Dexterity
+	DEX
+	Avoidance: The primary variable for the Dodge skill and general Armor Class (AC). Essential for "glass cannon" builds that cannot afford to take hits.4
+	Quickness
+	QUI
+	Action Economy: Determines the number of movement actions allowed per round. A high-QUI agent can traverse 5-6 rooms in a single fmove or sequence, drastically reducing travel time.4
+	2.3. State Vectors: Health and Resource Management
+The agent must maintain a constant internal model of its physiological state.
+* Hit Points (HP): The countdown to death. Reaching 0 results in the character's death, transfer to an Axlotl tank, and loss of XP/Items.4
+* Command Points (CP): The fuel for guild skills.
+* Guild-Specific Resources:
+   * Water (Fremen): A ticking clock. Every round in the desert consumes water. If water reaches 0, the character takes damage.
+   * Adrenaline (Fremen): Consumed by high-intensity combat modes like Rage.
+   * Intensity (Matres): A combat momentum meter that must be maintained by constant aggression.10
+2.4. Mortality and the Ghola System
+Death in DuneMUD is a significant setback. Upon death, the character is re-instantiated as a "Ghola" (clone) at a Tleilaxu regeneration center.
+* Penalty: The "imperfect ghola" process results in the loss of one or more levels, a chunk of XP, and potentially stat points.
+* Inventory: The corpse remains at the site of death. The agent must calculate the risk/reward of attempting a "corpse run" to retrieve equipment.
+* Insurance: Agents must be programmed to visit Astroport Banks frequently to deposit solaris. Money carried on the person is lost (left on the corpse) upon death.4
+________________
+3. Guild Systems: The Core of Agency
+The "Guild" is the defining framework for the agent's abilities. There are ten distinct Houses/Factions, each requiring a unique operational logic.
+3.1. House Atreides: The Paladin Model
+* Location: Caladan (6n, enter from AP).11
+* Archetype: The Atreides agent acts as a balanced combatant with support capabilities.
+* Logic:
+   * Equipment: The agent must acquire the Shieldbelt. This is a guild-specific armor that protects the entire body. At high levels, it gains reflective properties.
+   * Combat Loop: The agent should prioritize the Powerwords skill for stun effects and Righteous Fury for self-buffing.
+   * Advanced Defense: Upon reaching Guild Level (GL) 20+, the agent should integrate Counterstrike into its combat resolution logic. This allows the agent to block an incoming attack and immediately reflect damage.12
+   * Support: The agent can utilize the aid command to heal allied entities, making it suitable for multi-agent squads.13
+   * Logistics: The Atreides agent has a unique supply chain. Using the request command (e.g., request eration, request medikit), it can generate consumables using Command Points rather than Solaris, increasing its independence from shops.14
+3.2. House Harkonnen: The Berserker Model
+* Location: Giedi Prime (w,s,s,enter,d from AP).11
+* Archetype: High-risk, high-reward offensive juggernaut.
+* Logic:
+   * Combat Stance: The agent must verify that autorage is set to on. This ensures that specialized rage attacks (bodyslam, punch, kick) trigger automatically every round.9
+   * Resource Cycle: The Harkonnen agent operates on a "vampiric" loop.
+      * Action: Use drain skill in combat to steal HP from the enemy.
+      * Action: Upon killing a target, use drain corpse to recover massive HP/CP.
+      * Action: Use grill corpse to convert the enemy into "slices" (food).
+      * Action: eat slice to top up resources.9
+   * Chemical Enhancement: The agent should maintain a supply of Morphine. At level 5, inject morphine provides a substantial combat buff. The agent must track the duration of the drug to prevent withdrawal or overdose effects.9
+   * Stat Priority: STR is the dominant gene. It scales drain effectiveness and damage. INT is the dump stat.9
+3.3. The Fremen: The Survivalist Model
+* Location: Arrakis (9e,5n,rocks from AP).11
+* Archetype: Resource management expert and versatile fighter.
+* Logic:
+   * Water Discipline: The agent must run a background process monitoring the Water variable.
+      * Low Water: Execute distill corpse immediately after a kill.
+      * Low Adrenaline: Execute degland corpse.
+      * Optimization: If Adrenaline is high but Water is low, skip deglanding to maximize water yield.7
+   * Crysknife Maintenance: The Fremen weapon, the Crysknife, is powerful but requires specific handling.
+      * Initialization: unsheath crysknife, wield crysknife.
+      * Combat: poison crysknife applies a damage-over-time (DoT) effect.7
+   * Combat Modes: The agent must dynamically switch modes based on the threat analysis.
+      * Standard/Grinding: setmode rage (High damage, high GEXP).
+      * Survival: setmode fluid (High defense, evasion).
+      * Burst: setmode fanatic (Maximum damage, minimal defense).7
+   * Movement: The agent should utilize Sandwalking to traverse the deep desert without attracting worms. For rapid travel, the fmove (Fremen Move) command allows instantaneous traversal of multiple rooms (e.g., fmove n,n,e) based on the QUI stat.7
+   * Equipment Upgrades: The agent must visit Sietch Tabr to upgrade its Still-suit. Valid modifications include warrior, scout, and heavy_combat. These mods are cumulative and essential for endgame scaling.7
+3.4. Bene Gesserit (BG): The Controller Model
+* Location: Wallach IX (4w,enter from AP).11
+* Archetype: Crowd control and support buffer.
+* Logic:
+   * The Voice: The agent uses the voice command to force compliance from NPCs (e.g., voice drop weapon, voice flee). This requires high INT/WIS.
+   * Buffing: The agent acts as a force multiplier for other agents.
+      * ptrain (Prana Train): Buffs Strength and Dexterity.
+      * btrain (Bindu Train): Buffs Wisdom and Intelligence.11
+   * Weirding Way: A combat style emphasizing speed and precision. The agent should prioritize stats that enhance Reflexes.
+3.5. Bene Gesserit Warrior (BGW): The Duelist Model
+* Archetype: Martial arm of the Sisterhood.
+* Logic:
+   * Duality: The agent must choose between two mutually exclusive modes.
+      * Warrior Mode: Offense-oriented. Relies on Pride level.
+      * Mentat Mode: Defense-oriented. Relies on Foresight level.15
+   * Weaponry: The BGW agent is issued a unique Guild Blade.
+      * Level 1-99: The blade is a 2-handed weapon.
+      * Level 100+: It transforms into a Long-blade.15
+      * Upgrade: The agent must visit the upgrade room (w,n from guild hall) to spend "Training Points" (tps) on the blade.15
+   * Skill Priority: Maximize Victory (increases rewards) and Prana (offensive capability) first. Healing should be raised to 5 early to unlock passive regeneration.15
+3.6. Honored Matres: The Momentum Model
+* Location: Wallach IX (n, enter from AP).11
+* Archetype: Speed-based aggressor.
+* Logic:
+   * Intensity Engine: The agent's effectiveness is tied to the Intensity stat. It builds when hitting or being hit. The agent should maintain aggression to keep Intensity > 70%, triggering passive damage mitigation and stat bonuses.10
+   * Soostone System: The agent must manage an inventory of gems called Soostones which attach to armor and weapons.
+      * Green: Constitution (HP).
+      * Red: Strength.
+      * Cyan: Damage.
+      * Brown: Armor Class (Defense).
+      * Black: Attack Speed.
+      * Strategy: The agent should refine ore (refine <color>) and attach stones to tailor its build (e.g., full Red/Cyan for damage, Brown/Green for tanking).16
+   * Form Trees:
+      * Flurry: The leveling form. Unlocks knife hand for damage.
+      * Resheph: Defensive form.
+      * Katahzirui: Advanced form unlocked at GL 50.10
+3.7. The Sardaukar: The Legionnaire Model
+* Location: Salusa Secundus (4n from AP).11
+* Archetype: Heavy infantry.
+* Logic:
+   * Equipment: Similar to BGW, Sardaukar possess a leveling weapon (Blade) and uniform. The agent must monitor Char.Guild.Blade GMCP data to know when to upgrade.17
+   * Drugbelt: The agent has access to a belt of combat stimulants. Usage must be timed with difficult encounters to maximize the buff duration.
+3.8. The Tleilaxu: The Assassin Model
+* Location: Tleilax (5n,e from AP).11
+* Archetype: Stealth and genetic manipulation.
+* Logic:
+   * Kleptomania: The Tleilaxu agent receives a bonus to the steal command. It allows for a playstyle focused on economic gain through theft rather than just combat.18
+   * Grafting: During combat, the agent can draw blood from enemies. This resource is used with the graft skill to apply temporary skin grafts that heal or buff the agent. Warning: High rejection chance at low levels.19
+   * Shapeshifting: The agent can mimic other entities, useful for PVP deception or bypassing faction-locked guards.
+3.9. Fish Speakers: The Squad Leader Model
+* Location: Arrakis (e,29s,e,enter,4n,w,n from AP).11
+* Archetype: Pet class / Commander.
+* Logic:
+   * Companions: The agent acts as a squad leader. It must summon and manage a specialized companion NPC.
+      * Guard: Tank. Usage: guard ability blocks attacks.
+      * Grenadier: AoE Damage. Usage: grenade.
+      * Gunner: Control. Usage: suppress (stuns target).
+      * Sentinel: Burst DPS. Usage: berserk.20
+   * Bleed Mechanics: The Warrior sub-guild specializes in causing bleeding (Rend, Reap). The agent should cycle attacks to maintain bleed stacks on the target.20
+3.10. Ixian Machine Guild (IMG): The Cybernetic Model
+* Location: Ix.
+* Prerequisite: 100,000 Solaris.11
+* Archetype: Tech-based augmentation.
+* Logic: The agent constructs its own power. Progression involves purchasing and installing implants (Dermal Plating, Optics) rather than purely organic training. The agent must manage energy reserves (batteries) alongside standard HP.
+________________
+4. Combat Algorithms and Decision Trees
+For an autonomous agent, combat is a state machine loop executed once every 2 seconds (the round timer).
+4.1. The Combat Loop (OODA Loop)
+1. Observe: Parse Char.Vitals (GMCP) and the text stream.
+   * Input: "The soldier hits you for 20 damage."
+   * Input: hp: 150/200.
+2. Orient: Determine threat level.
+   * Condition: Is HP < 40%? -> High Threat.
+   * Condition: Is Target HP < 10%? -> Kill Opportunity.
+3. Decide: Select action from Guild Logic.
+   * If High Threat: Queue inject morphine (Harkonnen) or dragonstrike (Matres).
+   * If Kill Opportunity: Queue drain (Harkonnen) or headbutt.
+   * Else: Queue standard damage rotation.
+4. Act: Send command via seq to buffer against lag.
+   * seq kill soldier,bodyslam (Harkonnen).
+4.2. Safety Thresholds
+The agent must implement hard-coded safety triggers to prevent "Permadeath" (significant progression loss).
+* The Wimpy Variable: The agent should execute wimpy 50 immediately upon login. This forces the server to auto-flee if HP drops below 50%.
+* The Emergency Flee: If wimpy fails (blocked exit), the agent must flood the command buffer with directional commands (n, s, e, w) to attempt to brute-force an escape.
+* The Logoff Trigger: In catastrophic failure states (e.g., stuck in a room with a massive aggro mob), the agent may attempt to quit. However, DuneMUD likely has combat timers preventing instant logout, making this a risky fallback.
+________________
+5. Navigation, Cartography, and Geography
+5.1. Graph-Based Navigation
+The agent should not rely on visual descriptions for navigation. Instead, it must build a directed graph where:
+* Nodes = Room Hashes (from Room.Info GMCP).
+* Edges = Directions (n, s, enter).
+* Weights = Terrain difficulty / Movement cost (e.g., Desert = High Cost).
+5.2. Inter-Planetary Travel
+The universe is fragmented into planets. Travel is not contiguous; it requires the Spacing Guild.
+* Mechanism: The agent navigates to an Astroport (AP).
+* Protocol:
+   1. list (Query available flights).
+   2. order <ship_type> to <destination> (e.g., order frigate to caladan).
+   3. Wait for text trigger: "The frigate has arrived."
+   4. enter ship.
+   5. Wait for arrival. leave.4
+5.3. Planetary Atlases
+The agent needs specific routing data for key zones. (Directions relative to the planet's main Astroport).
+5.3.1. Arrakis (Dune)
+The most dangerous planet.
+* Environmental Hazard: Sandworms. If the text stream contains "Lightning flashes..." or "Wormsign," the agent must issue freeze or move to rocks immediately. Do not move rhythmically.
+* Key Locations:
+   * Shieldwall: all w. (Level 25-60). Climbing suit required.21
+   * Carthag: all e, n, e, all n, ne. (Level 45-80). Warning: Aggressive mobs.
+   * Sietch Tabr: The Fremen Hub. Safe zone.
+   * Smuggler's Camp: Desert Coords 14,113.21
+5.3.2. Caladan
+The Atreides homeworld. Water-rich, generally safer.
+* Key Locations:
+   * Atreides Training Base (Elecran): 4s, sw, 2s, 2se, 3e, buy ticket. (Level 20-30).21
+   * Castle Caladan: 4s, sw, 2s, 2se, 3e, buy ticket. (Level 30-100).
+   * Smuggler's Cave: all w, climb down, move bush. (Level 15-20). Requires Torch.21
+5.3.3. Giedi Prime
+The Harkonnen industrial hellscape.
+* Key Locations:
+   * Training Tower: w, n, w, n. (Levels 5-590). Vertical dungeon; difficulty scales with floor height.21
+   * Weapons Factory: n, n, ne, n, n, e, enter. (Level 75-100).
+   * Mines: sw, enter orni. "Wurms" area. Mobs scale to player level.21
+5.3.4. Tleilax
+Bio-organic cities.
+* Key Locations:
+   * Ghola University: w, 3s, 2w, 2s. (Level 29-44).21
+   * FurnitureDog Factory: 2s, w, enter. (Level 400-750). Endgame zone.21
+   * Vent: 1e, vent. Newbie zone (Max level 10).21
+5.3.5. Salusa Secundus
+The Prison Planet. High radiation/danger.
+* Key Locations:
+   * War Torn Area (Cymeks): 2n, 5e, 5n. (Level 275-480). High danger.21
+   * Sardaukar Training: s, w, building. (Level 1-5). Safe newbie zone.21
+________________
+6. Equipment, Economy, and Logistics
+6.1. Weapon Classification and Training
+DuneMUD weapons fall into specific classes. The agent must find the appropriate trainer to raise the skill cap for their chosen weapon, or their hit rate will be negligible.8
+Weapon Class
+	Trainer Location
+	Notes
+	Hand to Hand
+	Caladan (4w, s)
+	Essential for Matres and Bene Gesserit.
+	Crysknife
+	Arrakis (Secret)
+	Fremen only. High damage, requires unsheath.
+	Long Blades
+	Caladan (2w, n)
+	Standard swords. Good for Atreides.
+	Short Blades
+	Caladan (2w, n, w)
+	Knives/Dirks. Good for fast attackers.
+	Projectile
+	Ix (e, 2s, e, 2n, u, n)
+	Guns/Lasers. Warning: Do not use vs Shields.
+	Shields (Block)
+	Ix (e, 2s, e, 2n, 2u, w)
+	Defense skill trainer.
+	6.2. The Economy of Solaris
+Currency is vital for training skills and buying "Ghola Insurance" (clones).
+* Acquisition:
+   * Looting: The agent must execute get solaris from corpse after every kill.
+   * Salvage: Mechanical enemies (on Ix/Giedi Prime) drop parts.
+* Banking:
+   * The agent should maintain a threshold variable (e.g., MaxCarryCash = 5000).
+   * When money > MaxCarryCash, the agent navigates to the nearest Astroport.
+   * Command: deposit all.4
+6.3. Essential Equipment
+* Newbie Gear: Available in guild halls via "dispensers." The agent should acquire this immediately upon guild join.
+* Light Sources: Many areas (Smuggler's Cave) are dark. The agent should buy a Torch or Lantern at the general store (request lantern for Atreides).14
+* Still-suits: Mandatory for all agents on Arrakis, not just Fremen, to reduce water loss.
+* Guild Specifics:
+   * Atreides: Shieldbelt (Armor).
+   * Harkonnen: Battlesuit (Armor) + Injectors.
+   * Matres: Robes with Soostone slots.
+________________
+7. Agent Logic: The Newbie Progression Algorithm
+To effectively bootstrap a new character, the LLM should follow this specific instruction set:
+1. Initialization:
+   * Connect. Login.
+   * Set Config: set ansi on, wimpy 50, set tell_to_colour yellow.4
+2. Guild Selection:
+   * Analyze constraints (Gender).
+   * Navigate to Guild Hall (e.g., Caladan 6n, enter for Atreides).
+   * Join.
+3. Outfitting:
+   * Locate Guild Dispenser. get weapon, wear armor.
+   * Check Char.Status for starting XP.
+4. Initial Training:
+   * Navigate to Weapon Trainer (e.g., Caladan 4w, s for Hand-to-Hand).
+   * Train weapon skill to level 10.
+5. The Grinding Loop:
+   * Move to Newbie Zone (e.g., Caladan Forest Brigands 6e, all n, 2w).
+   * Loop:
+      * survey 1 (Check for targets).
+      * kill brigand.
+      * Combat Logic (Monitor HP).
+      * get all corpse.
+      * score (Check XP).
+      * If HP < 50%, rest/heal.
+      * If XP > MaxXP, return to Guild Master to advance level.
+6. Milestone (Level 5):
+   * Access help full becomes help.
+   * Newbie protection fades.
+   * Agent should seek First Aid trainer (Caladan 2e, n) to gain self-healing capability.8
+This structured approach ensures the agent survives the critical early levels where mortality rates are highest, establishing a foothold for advanced gameplay.
+________________
+Citations:.1
+Works cited
+1. DuneMUD is a Dune-themed LpMUD (Multi-User Dungeon) founded in 1992. - MUDStats.Com, accessed December 3, 2025, https://mudstats.com/World/DuneMUD
+2. wiki:about [Dune MUD], accessed December 3, 2025, https://dunemud.net/wiki/about
+3. DuneMUD - MUDListings, accessed December 3, 2025, https://mudlistings.com/general-and-hybrid-muds/dunemud
+4. newbies [Dune MUD], accessed December 3, 2025, https://dunemud.net/newbies
+5. start [Dune MUD], accessed December 3, 2025, https://dunemud.net/
+6. gmcp:start [Dune MUD], accessed December 3, 2025, https://dunemud.net/gmcp/start
+7. guilds:fremen:main [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/fremen/main
+8. tips:mudskills [Dune MUD], accessed December 3, 2025, https://dunemud.net/tips/mudskills
+9. guilds:harko:main [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/harko/main
+10. guilds:matres:main [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/matres/main
+11. guilds:guildlist [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/guildlist
+12. guilds:atreides:ghelp:counterstrike [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/atreides/ghelp/counterstrike
+13. guilds:atreides:ghelp:aid [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/atreides/ghelp/aid
+14. guilds:atreides:ghelp:request [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/atreides/ghelp/request
+15. guilds:bgw:bgwnewbie [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/bgw/bgwnewbie
+16. guilds:matres:ghelp:soostones [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/matres/ghelp/soostones
+17. Imperial Sardaukar Guild GMCP - Dune MUD, accessed December 3, 2025, https://dunemud.net/gmcp/sardaukar
+18. help:steal [Dune MUD], accessed December 3, 2025, https://dunemud.net/help/steal
+19. guilds:tlx:skills:graft [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/tlx/skills/graft
+20. guilds:speakers:main [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/speakers/main
+21. Areas - Dune MUD, accessed December 3, 2025, https://dunemud.net/areas
+22. guilds:atreides:ghelp:overpower [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/atreides/ghelp/overpower
+23. guilds:fremen:ghelp:tau [Dune MUD], accessed December 3, 2025, https://dunemud.net/guilds/fremen/ghelp/tau
+24. help:survey [Dune MUD], accessed December 3, 2025, https://dunemud.net/help/survey
