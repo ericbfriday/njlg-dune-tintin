@@ -4,6 +4,9 @@
 
 #variable {loop.arrakis.HarkonnenWarehouseWest} {w;n;n;n;n;n;n;e;e;s;s;s;s;s;s;w;}
 #variable {loop.arrakis.AbandonedSietch} {w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;w;n;s;s;n;}
+#nop Lil area: down from Arrakis AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.arrakis.lilArea} {}
 
 #nop
 #nop Tleilaxu
@@ -11,6 +14,9 @@
 
 #variable {loop.tleilaxu.noobWest} {n;ne;e;se;s;sw;w;nw;}
 #variable {loop.tleilaxu.noobDown} {next;next;next;next;next;trapdoor;back;exit;e;drink basin;d;d;enter;}
+#nop Seeker's: up from Tleilax AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.tleilaxu.seekers} {}
 
 #nop
 #nop Giedi Prime
@@ -18,3 +24,61 @@
 
 #variable {loop.gp.trainingArea} {n;ne;e;se;s;sw;w;nw;}
 #variable {loop.gp.soldierBarracks} {w;n;s;s;n;w;n;s;s;n;w;e;e;e;e;}
+#nop Hospital: east from Giedi Prime AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.gp.hospital} {}
+
+#nop
+#nop Caladan (Atreides homeworld)
+#nop Note: Caladan has no level 1-5 area. Lowest is Atreides High School (5-20).
+#nop For levels 1-5, use Giedi Prime Infirmary or Wallach IX options below.
+#nop
+
+#nop Atreides High School (5-20): 3w, n from AP
+#nop TODO: Map internal layout to create loop
+#variable {loop.caladan.highSchool} {}
+
+#nop Newbie Lake: portal from Caladan AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.caladan.newbieLake} {}
+
+#variable {loop.caladan.forestBrigands} {n;ne;e;se;s;sw;w;nw;}
+#variable {loop.caladan.smugglersCave} {n;e;s;w;}
+
+#nop
+#nop Giedi Prime - Newbie Areas (for Atreides levels 1-5)
+#nop The Infirmary (1-5): all e from AP
+#nop TODO: Map internal layout to create loop
+#nop
+
+#variable {loop.gp.infirmary} {}
+
+#nop
+#nop Wallach IX - Newbie Areas (for Atreides levels 1-5)
+#nop Orchard (1-50 newbie entrance): 5n, enter from AP
+#nop Wallach Ward (newbie): e,e,down from AP
+#nop TODO: Map internal layouts to create loops
+#nop
+
+#variable {loop.wallach.orchard} {}
+#variable {loop.wallach.ward} {}
+
+#nop
+#nop Ix
+#nop
+
+#nop URC: e, 14n, w from Ix AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.ix.urc} {}
+
+#nop Ix Tower: e, n, e, e, enter from Ix AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.ix.tower} {}
+
+#nop
+#nop Salusa Secundus
+#nop
+
+#nop Jails: n, board orni3, n, n... from Salusa AP
+#nop TODO: Map internal layout to create full loop
+#variable {loop.salusa.jails} {}
