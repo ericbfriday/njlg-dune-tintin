@@ -1,0 +1,235 @@
+#nop
+#nop Harkonnen Settings - Berserker Combat Guild
+#nop Strengths: High damage, self-healing through drain, battlerage buff
+#nop Corpse: grill corpse -> eat slice for healing
+#nop
+
+set hprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useBattlerage} {1}
+#variable {useAutoDrain} {1}
+#variable {autoGrill} {1}
+#variable {guildLevel} {0}
+#variable {sliceCount} {0}
+#variable {battlePoints} {0}
+#variable {maxBattlePoints} {0}
+
+#nop
+#nop Battlerage Management
+#nop Harkonnen signature ability - increases damage output significantly
+#nop autorage keeps it active, battlerage triggers the effect
+#nop
+
+#alias {enableRage} {
+  autorage on;
+  #variable {useBattlerage} {1};
+  #showme {<119>Battlerage ENABLED - Will auto-rage in combat<099>}
+}
+
+#alias {disableRage} {
+  autorage off;
+  #variable {useBattlerage} {0};
+  #showme {<129>Battlerage disabled<099>}
+}
+
+#nop
+#nop Drain - Harkonnen self-healing ability
+#nop Drains life from the target, healing the Harkonnen
+#nop Cost varies by guild level, very efficient healing
+#nop
+
+#alias {doDrain} {
+  #if { $battlePoints > 15 } {
+    drain
+  }
+}
+
+#nop
+#nop Attack sequence - Harkonnen berserker style
+#nop battlerage for damage boost, drain for sustain
+#nop
+
+#alias {attack} {
+  #if { $useBattlerage == 1 } {
+    #if { $battlePoints > 20 } {
+      battlerage
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Auto-drain when health drops
+#nop Harkonnen sustain themselves through drain, not external healing
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #if { $useAutoDrain == 1 } {
+    #if { $hpPercent < 60 } {
+      doDrain
+    }
+  }
+} {6}
+
+#nop
+#nop Battle Points tracking from Harkonnen prompt
+#nop Format typically: BP: current/max
+#nop
+
+#action {BP: %d/%d} {
+  #variable {battlePoints} {%1};
+  #variable {maxBattlePoints} {%2}
+} {6}
+
+#nop
+#nop Corpse handling - Harkonnen grill corpses for slices
+#nop grill corpse -> produces slices that can be eaten for healing
+#nop drain corpse -> extracts remaining energy
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #if { $autoGrill == 1 } {
+    grill corpse
+  };
+  drain corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Slice management - eat slices for healing
+#nop
+
+#action {You grill the corpse and produce %d slice%*} {
+  #math {sliceCount} { $sliceCount + %1 };
+  #showme {<149>Grilled corpse: +%1 slices (Total: $sliceCount)<099>}
+} {5}
+
+#alias {eatSlice} {
+  #if { $sliceCount > 0 } {
+    eat slice;
+    #math {sliceCount} { $sliceCount - 1 }
+  } {
+    #showme {<119>No slices available! Grill more corpses.<099>}
+  }
+}
+
+#nop
+#nop Auto-eat slice when health critical
+#nop
+
+#action {HP: %d/%d %*} {
+  #math {hpPercent} {(%1 / %2) * 100};
+  #if { $hpPercent < 25 } {
+    #if { $sliceCount > 0 } {
+      eatSlice
+    }
+  }
+} {7}
+
+#nop
+#nop Morphine injection - emergency healing/damage reduction
+#nop Requires morphine syringe item
+#nop
+
+#alias {emergencyHeal} {
+  inject morphine
+}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Harkonnen-specific combat triggers
+#nop
+
+#action {You feel the rage building inside you} {
+  #showme {<119>BATTLERAGE ACTIVE!<099>}
+} {5}
+
+#action {Your rage subsides} {
+  #showme {<129>Battlerage ended<099>}
+} {5}
+
+#action {You drain life from %*} {
+  #showme {<149>Draining life!<099>}
+} {5}
+
+#nop
+#nop Navigation - Getting to Harkonnen areas
+#nop Guild hall: Giedi Prime - 2w, n from AP
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Harkonnen Guild Hall from Giedi Prime AP;
+  #showme {<129>Going to Harkonnen Guild Hall<099>};
+  #send {2w};
+  #send {n}
+}
+
+#alias {gotoTrainingArea} {
+  #nop Training area from Giedi Prime AP;
+  #showme {<129>Going to Training Area (around AP)<099>}
+}
+
+#alias {gotoSoldierBarracks} {
+  #nop Soldier Barracks from Giedi Prime AP;
+  #showme {<129>Going to Soldier Barracks (west of AP)<099>};
+  #send {w}
+}
+
+#alias {gotoWarehouse} {
+  #nop Harkonnen Warehouse from Arrakis AP;
+  #showme {<129>Going to Harkonnen Warehouse (Arrakis)<099>};
+  #showme {<129>Note: You should be at Arrakis AP for this<099>}
+}
+
+#nop
+#nop Harkonnen status display
+#nop
+
+#alias {harkStatus} {
+  #showme {<159>=== Harkonnen Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Battle Points: $battlePoints / $maxBattlePoints};
+  #showme {Slices: $sliceCount};
+  #showme {Battlerage: $useBattlerage (1=on, 0=off)};
+  #showme {Auto-drain: $useAutoDrain};
+  #showme {Auto-grill: $autoGrill}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {harkHelp} {
+  #showme {<159>=== Harkonnen Quick Reference ===<099>};
+  #showme {<149>Combat:<099>};
+  #showme {  enableRage/disableRage - Toggle battlerage};
+  #showme {  doDrain - Manual drain for healing};
+  #showme {  eatSlice - Eat a grilled slice for healing};
+  #showme {  emergencyHeal - Inject morphine};
+  #showme {<149>Settings:<099>};
+  #showme {  useBattlerage - Auto battlerage (0/1)};
+  #showme {  useAutoDrain - Auto drain when hurt (0/1)};
+  #showme {  autoGrill - Auto grill corpses (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - Harkonnen guild hall};
+  #showme {  harkStatus - Show current status}
+}
+
+#showme {<119>Harkonnen guild loaded! Type 'harkHelp' for commands.<099>}
+

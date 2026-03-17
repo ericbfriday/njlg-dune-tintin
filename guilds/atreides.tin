@@ -1,0 +1,163 @@
+#nop
+#nop Atreides Settings
+#nop
+
+set aprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useCounterstrike} {0}
+#variable {usePowerwords} {0}
+#variable {useRighteousFury} {0}
+#variable {guildLevel} {0}
+
+#nop
+#nop Shieldbelt management - Atreides signature armor
+#nop
+
+#alias {equipShield} {
+  wear shieldbelt;
+  activate shieldbelt
+}
+
+#nop
+#nop Corpse handling - Atreides have no special corpse processing
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Attack sequence - Atreides balanced combat
+#nop
+
+#alias {attack} {
+  #if { $useRighteousFury == 1 } {
+    #if { $commandPoints > 30 } {
+      fury
+    }
+  };
+  #if { $usePowerwords == 1 } {
+    #if { $commandPoints > 20 } {
+      powerword stun %1
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Counterstrike - Available at Guild Level 20+
+#nop Blocks incoming attack and reflects damage
+#nop
+
+#action {%1 attacks you} {
+  #if { $useCounterstrike == 1 } {
+    #if { $guildLevel >= 20 } {
+      #if { $commandPoints > 25 } {
+        counterstrike
+      }
+    }
+  }
+} {5}
+
+#nop
+#nop Aid - Atreides healing ability for self and allies
+#nop
+
+#alias {healSelf} {
+  #if { $commandPoints > 15 } {
+    aid me
+  }
+}
+
+#nop
+#nop Auto-heal when health drops below threshold
+#nop
+
+#action {HP: %d/%d %*} {
+  #math {hpPercent} {(%1 / %2) * 100};
+  #if { $hpPercent < 40 } {
+    healSelf
+  }
+} {6}
+
+#nop
+#nop Request system - Atreides can generate supplies with CP
+#nop request eration - food
+#nop request medikit - healing item
+#nop request lantern - light source
+#nop
+
+#alias {resupply} {
+  request eration;
+  request medikit
+}
+
+#nop
+#nop Overpower - knockdown attack
+#nop
+
+#alias {knockdown} {
+  #if { $commandPoints > 35 } {
+    overpower %1
+  }
+}
+
+#nop
+#nop Guild level tracking from prompt
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+}
+
+#nop
+#nop Navigation helpers - Getting to newbie leveling areas
+#nop Note: Caladan has no level 1-5 area. Use cross-planet options.
+#nop
+
+#nop Caladan areas
+#alias {gotoHighSchool} {
+  #nop Atreides High School (5-20) from Caladan AP;
+  #send {3w};
+  #send {n}
+}
+
+#alias {gotoForestBrigands} {
+  #nop Forest Brigand Camp (10-20, level 10 cap) from Caladan AP;
+  #send {6e};
+  #send {all n};
+  #send {2w};
+  #send {squeeze}
+}
+
+#alias {gotoSmugglersCave} {
+  #nop Smuggler's Cave (15-20) from Caladan AP - need torch;
+  #send {all w};
+  #send {climb down};
+  #send {move bush}
+}
+
+#nop Cross-planet level 1-5 areas (requires travel from Caladan)
+#alias {gotoGPInfirmary} {
+  #nop The Infirmary (1-5) from Giedi Prime AP;
+  #send {all e}
+}
+
+#alias {gotoWallachOrchard} {
+  #nop Orchard (1-50 newbie) from Wallach IX AP;
+  #send {5n};
+  #send {enter}
+}
+
+#alias {gotoWallachWard} {
+  #nop Wallach Ward (newbie) from Wallach IX AP;
+  #send {e};
+  #send {e};
+  #send {down}
+}

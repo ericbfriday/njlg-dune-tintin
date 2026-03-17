@@ -1,0 +1,282 @@
+#nop
+#nop Fish Speakers Settings - Companion Combat Guild
+#nop Strengths: Companion system (Guard, Grenadier, Gunner, Sentinel), bleed damage
+#nop Corpse: No special processing
+#nop Location: Arrakis - s, enter palace from AP
+#nop
+
+set fsprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useCompanion} {1}
+#variable {useBleed} {1}
+#variable {guildLevel} {0}
+#variable {companionType} {none}
+#variable {companionHealth} {0}
+#variable {speakerPoints} {0}
+#variable {maxSpeakerPoints} {0}
+
+#nop
+#nop Companion System - Fish Speakers signature ability
+#nop Companion types:
+#nop   Guard - Tank, absorbs damage
+#nop   Grenadier - Area damage dealer
+#nop   Gunner - Ranged damage dealer
+#nop   Sentinel - Balanced combat support
+#nop
+
+#alias {summonGuard} {
+  #if { $speakerPoints > 30 } {
+    summon guard;
+    #variable {companionType} {guard};
+    #showme {<149>Summoning Guard companion (tank)<099>}
+  } {
+    #showme {<119>Insufficient speaker points<099>}
+  }
+}
+
+#alias {summonGrenadier} {
+  #if { $speakerPoints > 35 } {
+    summon grenadier;
+    #variable {companionType} {grenadier};
+    #showme {<149>Summoning Grenadier companion (AoE)<099>}
+  } {
+    #showme {<119>Insufficient speaker points<099>}
+  }
+}
+
+#alias {summonGunner} {
+  #if { $speakerPoints > 35 } {
+    summon gunner;
+    #variable {companionType} {gunner};
+    #showme {<149>Summoning Gunner companion (ranged)<099>}
+  } {
+    #showme {<119>Insufficient speaker points<099>}
+  }
+}
+
+#alias {summonSentinel} {
+  #if { $speakerPoints > 30 } {
+    summon sentinel;
+    #variable {companionType} {sentinel};
+    #showme {<149>Summoning Sentinel companion (balanced)<099>}
+  } {
+    #showme {<119>Insufficient speaker points<099>}
+  }
+}
+
+#alias {dismissCompanion} {
+  dismiss companion;
+  #variable {companionType} {none};
+  #showme {<129>Companion dismissed<099>}
+}
+
+#nop
+#nop Companion Commands
+#nop
+
+#alias {companionAttack} {
+  order companion kill %1
+}
+
+#alias {companionDefend} {
+  order companion defend
+}
+
+#alias {companionFollow} {
+  order companion follow
+}
+
+#alias {companionStay} {
+  order companion stay
+}
+
+#nop
+#nop Bleed Attack - Fish Speaker damage over time ability
+#nop Causes target to bleed, dealing damage over multiple rounds
+#nop
+
+#alias {bleedAttack} {
+  #if { $speakerPoints > 15 } {
+    bleed %1;
+    #showme {<119>Applying bleed to %1<099>}
+  } {
+    #showme {<129>Insufficient speaker points for bleed<099>}
+  }
+}
+
+#nop
+#nop Attack sequence - Fish Speakers with companion support
+#nop
+
+#alias {attack} {
+  #if { $useCompanion == 1 } {
+    #if { "$companionType" != "none" } {
+      companionAttack %1
+    }
+  };
+  #if { $useBleed == 1 } {
+    #if { $speakerPoints > 15 } {
+      bleed %1
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Corpse handling - Fish Speakers have no special corpse processing
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Speaker Points tracking
+#nop
+
+#action {SP: %d/%d} {
+  #variable {speakerPoints} {%1};
+  #variable {maxSpeakerPoints} {%2}
+} {6}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Companion status tracking
+#nop
+
+#action {Your companion has %d/%d health} {
+  #variable {companionHealth} {%1};
+  #if { %1 < 20 } {
+    #showme {<119>WARNING: Companion health critical!<099>}
+  }
+} {5}
+
+#action {Your companion has fallen} {
+  #variable {companionType} {none};
+  #variable {companionHealth} {0};
+  #showme {<119>Companion DIED! Summon a new one.<099>}
+} {3}
+
+#action {Your companion attacks %*} {
+  #showme {<149>Companion attacking!<099>}
+} {6}
+
+#nop
+#nop Bleed feedback
+#nop
+
+#action {%1 is bleeding} {
+  #showme {<119>%1 is bleeding!<099>}
+} {5}
+
+#action {%1 bleeds from their wounds} {
+  #showme {<149>Bleed damage ticking on %1<099>}
+} {6}
+
+#nop
+#nop Health tracking
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #nop Order companion to defend if health low;
+  #if { $hpPercent < 30 } {
+    #if { "$companionType" == "guard" } {
+      companionDefend
+    }
+  }
+} {6}
+
+#nop
+#nop Navigation - Getting to Fish Speaker areas
+#nop Guild hall: Arrakis - s, enter palace from AP
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Fish Speakers Guild Hall from Arrakis AP;
+  #showme {<149>Going to Fish Speakers Palace<099>};
+  #send {s};
+  #send {enter palace}
+}
+
+#alias {gotoAbandonedSietch} {
+  #nop Abandoned Sietch from Arrakis AP;
+  #showme {<149>Going to Abandoned Sietch<099>};
+  #send {w}
+}
+
+#nop
+#nop Quick summon based on situation
+#nop
+
+#alias {summonTank} {
+  summonGuard
+}
+
+#alias {summonDPS} {
+  summonGunner
+}
+
+#alias {summonAOE} {
+  summonGrenadier
+}
+
+#nop
+#nop Fish Speakers status display
+#nop
+
+#alias {fsStatus} {
+  #showme {<149>=== Fish Speakers Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Speaker Points: $speakerPoints / $maxSpeakerPoints};
+  #showme {Companion Type: $companionType};
+  #showme {Companion Health: $companionHealth};
+  #showme {Auto Companion: $useCompanion (1=on)};
+  #showme {Auto Bleed: $useBleed (1=on)}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {fsHelp} {
+  #showme {<149>=== Fish Speakers Quick Reference ===<099>};
+  #showme {<149>Companion Summons:<099>};
+  #showme {  summonGuard - Tank companion};
+  #showme {  summonGrenadier - AoE damage companion};
+  #showme {  summonGunner - Ranged damage companion};
+  #showme {  summonSentinel - Balanced companion};
+  #showme {  dismissCompanion - Dismiss current companion};
+  #showme {<149>Companion Orders:<099>};
+  #showme {  companionAttack <target> - Order attack};
+  #showme {  companionDefend - Order defensive stance};
+  #showme {  companionFollow - Order to follow you};
+  #showme {  companionStay - Order to stay in place};
+  #showme {<149>Combat:<099>};
+  #showme {  bleedAttack <target> - Apply bleed DoT};
+  #showme {  attack <target> - Full attack sequence};
+  #showme {<149>Settings:<099>};
+  #showme {  useCompanion - Auto companion orders (0/1)};
+  #showme {  useBleed - Auto bleed attacks (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - Fish Speakers palace};
+  #showme {  fsStatus - Show current status}
+}
+
+#showme {<149>Fish Speakers guild loaded! Type 'fsHelp' for commands.<099>}
+

@@ -1,0 +1,269 @@
+#nop
+#nop Bene Gesserit Settings - Voice and Weirding Way Guild
+#nop Strengths: Voice commands for control, prana/bindu training, weirding combat
+#nop Corpse: No special processing
+#nop
+
+set bprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useVoice} {1}
+#variable {useWeirding} {1}
+#variable {guildLevel} {0}
+#variable {pranaPoints} {0}
+#variable {maxPrana} {0}
+#variable {binduPoints} {0}
+#variable {maxBindu} {0}
+
+#nop
+#nop Prana and Bindu - BG's unique resource system
+#nop Prana (mental) - Used for Voice commands
+#nop Bindu (physical) - Used for weirding combat
+#nop ptrain/btrain to improve respective pools
+#nop
+
+#action {Prana: %d/%d} {
+  #variable {pranaPoints} {%1};
+  #variable {maxPrana} {%2}
+} {6}
+
+#action {Bindu: %d/%d} {
+  #variable {binduPoints} {%1};
+  #variable {maxBindu} {%2}
+} {6}
+
+#nop
+#nop Voice Command - BG's signature ability
+#nop Uses Prana to command targets
+#nop Voice commands: stop, sleep, leave, drop, give, follow, attack
+#nop
+
+#alias {voiceStop} {
+  #if { $pranaPoints > 15 } {
+    voice stop %1
+  } {
+    #showme {<129>Insufficient prana for Voice<099>}
+  }
+}
+
+#alias {voiceSleep} {
+  #if { $pranaPoints > 20 } {
+    voice sleep %1
+  } {
+    #showme {<129>Insufficient prana for Voice<099>}
+  }
+}
+
+#alias {voiceLeave} {
+  #if { $pranaPoints > 15 } {
+    voice leave %1
+  } {
+    #showme {<129>Insufficient prana for Voice<099>}
+  }
+}
+
+#nop
+#nop Weirding Way - BG combat style
+#nop Enhanced combat technique using Bindu
+#nop
+
+#alias {weirding} {
+  #if { $binduPoints > 10 } {
+    weirding
+  }
+}
+
+#nop
+#nop Attack sequence - Voice to disable, then strike
+#nop
+
+#alias {attack} {
+  #if { $useVoice == 1 } {
+    #if { $pranaPoints > 20 } {
+      voice stop %1
+    }
+  };
+  #if { $useWeirding == 1 } {
+    #if { $binduPoints > 10 } {
+      weirding
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Corpse handling - BG have no special corpse processing
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Prana-Bindu Training
+#nop ptrain - Improve prana regeneration and pool
+#nop btrain - Improve bindu regeneration and pool
+#nop
+
+#alias {trainPrana} {
+  ptrain
+}
+
+#alias {trainBindu} {
+  btrain
+}
+
+#nop
+#nop Truthsense - Detect lies
+#nop
+
+#alias {detectTruth} {
+  #if { $pranaPoints > 5 } {
+    truthsense %1
+  }
+}
+
+#nop
+#nop Simulflow - Multiple thought processing
+#nop Allows simultaneous actions
+#nop
+
+#alias {multiTask} {
+  #if { $pranaPoints > 25 } {
+    simulflow
+  }
+}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Auto-weirding when indicator appears
+#nop The tilde matches ANSI escape codes for colored prompt indicators
+#nop
+
+#action {~\e[37m\e[1m[\e[35mWW\e[37m]\e[0m} {
+  #if { $useWeirding == 1 } {
+    weirding
+  }
+} {4}
+
+#nop
+#nop Health tracking and defensive Voice use
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #nop Use Voice defensively when hurt;
+  #if { $hpPercent < 30 } {
+    #if { $pranaPoints > 20 } {
+      #if { $attacking == 1 } {
+        voice sleep $currentTarget
+      }
+    }
+  }
+} {6}
+
+#nop
+#nop Combat triggers
+#nop
+
+#action {You speak with the Voice} {
+  #showme {<159>Voice command used!<099>}
+} {5}
+
+#action {%1 obeys your command} {
+  #showme {<149>%1 is under your control<099>}
+} {5}
+
+#action {%1 resists your Voice} {
+  #showme {<119>Voice RESISTED by %1!<099>}
+} {5}
+
+#action {Your weirding attack strikes true} {
+  #showme {<149>Weirding hit!<099>}
+} {5}
+
+#nop
+#nop Navigation - Getting to Bene Gesserit areas
+#nop Guild hall: Wallach IX - 5n, w, n from AP
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Bene Gesserit Guild Hall from Wallach IX AP;
+  #showme {<159>Going to Bene Gesserit Mother School<099>};
+  #send {5n};
+  #send {w};
+  #send {n}
+}
+
+#alias {gotoOrchard} {
+  #nop Orchard newbie area from Wallach IX AP;
+  #showme {<159>Going to Orchard (1-50)<099>};
+  #send {5n};
+  #send {enter}
+}
+
+#alias {gotoWard} {
+  #nop Wallach Ward newbie area from Wallach IX AP;
+  #showme {<159>Going to Wallach Ward<099>};
+  #send {e};
+  #send {e};
+  #send {down}
+}
+
+#nop
+#nop BG status display
+#nop
+
+#alias {bgStatus} {
+  #showme {<159>=== Bene Gesserit Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Prana: $pranaPoints / $maxPrana};
+  #showme {Bindu: $binduPoints / $maxBindu};
+  #showme {Voice enabled: $useVoice};
+  #showme {Weirding enabled: $useWeirding}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {bgHelp} {
+  #showme {<159>=== Bene Gesserit Quick Reference ===<099>};
+  #showme {<149>Voice Commands (use Prana):<099>};
+  #showme {  voiceStop <target> - Stop target's action};
+  #showme {  voiceSleep <target> - Put target to sleep};
+  #showme {  voiceLeave <target> - Make target leave};
+  #showme {<149>Combat:<099>};
+  #showme {  weirding - Activate weirding combat};
+  #showme {  attack <target> - Full attack sequence};
+  #showme {<149>Training:<099>};
+  #showme {  trainPrana - Improve mental abilities};
+  #showme {  trainBindu - Improve physical abilities};
+  #showme {<149>Other:<099>};
+  #showme {  detectTruth <target> - Use truthsense};
+  #showme {  multiTask - Activate simulflow};
+  #showme {<149>Settings:<099>};
+  #showme {  useVoice - Auto Voice in combat (0/1)};
+  #showme {  useWeirding - Auto weirding (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - Mother School};
+  #showme {  gotoOrchard - Newbie area};
+  #showme {  bgStatus - Show current status}
+}
+
+#showme {<159>Bene Gesserit guild loaded! Type 'bgHelp' for commands.<099>}
+

@@ -1,0 +1,260 @@
+#nop
+#nop Sardaukar Settings - Elite Imperial Military Guild
+#nop Strengths: Guild blade mastery, drugbelt enhancements, training points
+#nop Corpse: No special processing
+#nop Location: Salusa Secundus
+#nop
+
+set sprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useBladeSkills} {1}
+#variable {useDrugbelt} {1}
+#variable {guildLevel} {0}
+#variable {trainingPoints} {0}
+#variable {bladeType} {none}
+#variable {drugbeltCharges} {0}
+
+#nop
+#nop Guild Blade System - Sardaukar signature weapon
+#nop Different blade types provide different bonuses
+#nop Blades improve with guild level and training
+#nop
+
+#alias {equipBlade} {
+  wield blade;
+  #showme {<119>Guild blade equipped<099>}
+}
+
+#alias {checkBlade} {
+  examine blade;
+  #showme {<129>Check your blade stats<099>}
+}
+
+#nop
+#nop Blade Skills - Various combat techniques
+#nop
+
+#alias {bladeStrike} {
+  #if { $trainingPoints > 10 } {
+    bladestrike %1
+  } {
+    #showme {<129>Insufficient training points<099>}
+  }
+}
+
+#alias {bladeParry} {
+  #if { $trainingPoints > 5 } {
+    bladeparry
+  }
+}
+
+#alias {bladeSweep} {
+  #if { $trainingPoints > 15 } {
+    bladesweep
+  }
+}
+
+#nop
+#nop Drugbelt System - Chemical enhancements
+#nop Provides temporary combat buffs
+#nop Requires drugbelt item to be worn
+#nop
+
+#alias {equipDrugbelt} {
+  wear drugbelt;
+  #showme {<149>Drugbelt equipped<099>}
+}
+
+#alias {useDrug} {
+  #if { $drugbeltCharges > 0 } {
+    inject %1;
+    #math {drugbeltCharges} { $drugbeltCharges - 1 }
+  } {
+    #showme {<119>Drugbelt empty! Refill at guild.<099>}
+  }
+}
+
+#alias {refillDrugbelt} {
+  #showme {<129>Visit guild hall to refill drugbelt<099>};
+  refill drugbelt
+}
+
+#nop
+#nop Attack sequence - Sardaukar disciplined combat
+#nop
+
+#alias {attack} {
+  #if { $useBladeSkills == 1 } {
+    #if { $trainingPoints > 10 } {
+      bladestrike %1
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Corpse handling - Sardaukar have no special corpse processing
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Training Points tracking
+#nop TP used for blade skills and guild abilities
+#nop
+
+#action {TP: %d} {
+  #variable {trainingPoints} {%1}
+} {6}
+
+#action {Training Points: %d} {
+  #variable {trainingPoints} {%1}
+} {6}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Archnemesis System - Sardaukar special enemy mechanics
+#nop Certain enemies are "archenemies" for bonus damage
+#nop
+
+#action {%1 is your archnemesis} {
+  #showme {<119>ARCHNEMESIS DETECTED: %1 - Bonus damage active!<099>}
+} {4}
+
+#nop
+#nop Health tracking with defensive drugbelt use
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #if { $useDrugbelt == 1 } {
+    #if { $hpPercent < 40 } {
+      #if { $drugbeltCharges > 0 } {
+        useDrug stimulant
+      }
+    }
+  }
+} {6}
+
+#nop
+#nop Combat feedback triggers
+#nop
+
+#action {Your blade strikes with deadly precision} {
+  #showme {<149>Bladestrike hit!<099>}
+} {5}
+
+#action {You parry the incoming attack} {
+  #showme {<149>Parried!<099>}
+} {5}
+
+#action {The drug courses through your veins} {
+  #showme {<119>Drug effect active!<099>}
+} {5}
+
+#action {Your drugbelt is empty} {
+  #variable {drugbeltCharges} {0};
+  #showme {<119>Drugbelt EMPTY!<099>}
+} {4}
+
+#nop
+#nop Navigation - Getting to Sardaukar areas
+#nop Guild hall: Salusa Secundus - n, board orni3 from AP
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Sardaukar Guild Hall from Salusa Secundus AP;
+  #showme {<119>Going to Sardaukar Guild Hall<099>};
+  #send {n};
+  #send {board orni3}
+}
+
+#alias {gotoJails} {
+  #nop Jails leveling area from Salusa Secundus;
+  #showme {<119>Going to Jails area<099>};
+  #send {n};
+  #send {board orni3};
+  #send {n};
+  #send {n}
+}
+
+#alias {gotoTrainingGrounds} {
+  #nop Sardaukar training grounds;
+  #showme {<119>Going to Training Grounds<099>};
+  #send {train}
+}
+
+#nop
+#nop Training commands
+#nop
+
+#alias {trainBlade} {
+  #showme {<129>Training blade skills at guild<099>};
+  train blade
+}
+
+#alias {trainCombat} {
+  #showme {<129>Training combat skills<099>};
+  train combat
+}
+
+#nop
+#nop Sardaukar status display
+#nop
+
+#alias {sardStatus} {
+  #showme {<119>=== Sardaukar Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Training Points: $trainingPoints};
+  #showme {Blade Type: $bladeType};
+  #showme {Drugbelt Charges: $drugbeltCharges};
+  #showme {Blade Skills: $useBladeSkills (1=on)};
+  #showme {Auto Drugbelt: $useDrugbelt (1=on)}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {sardHelp} {
+  #showme {<119>=== Sardaukar Quick Reference ===<099>};
+  #showme {<149>Blade Combat:<099>};
+  #showme {  equipBlade - Wield your guild blade};
+  #showme {  bladeStrike <target> - Precise blade attack};
+  #showme {  bladeParry - Defensive parry stance};
+  #showme {  bladeSweep - Area attack};
+  #showme {<149>Drugbelt:<099>};
+  #showme {  equipDrugbelt - Wear your drugbelt};
+  #showme {  useDrug <type> - Inject a drug};
+  #showme {  refillDrugbelt - Refill at guild};
+  #showme {<149>Training:<099>};
+  #showme {  trainBlade - Improve blade skills};
+  #showme {  trainCombat - Improve combat};
+  #showme {<149>Settings:<099>};
+  #showme {  useBladeSkills - Auto blade skills (0/1)};
+  #showme {  useDrugbelt - Auto drug use (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - Sardaukar guild};
+  #showme {  gotoJails - Leveling area};
+  #showme {  sardStatus - Show current status}
+}
+
+#showme {<119>Sardaukar guild loaded! Type 'sardHelp' for commands.<099>}
+

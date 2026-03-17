@@ -1,0 +1,250 @@
+#nop
+#nop Newbie Settings - For characters before joining a guild
+#nop This file helps with the tutorial, early leveling, and basic game tasks
+#nop
+
+#nop
+#nop Initial Configuration - Run these commands manually on first login
+#nop
+
+#alias {setupNewbie} {
+  #nop Set ANSI colors for proper display;
+  set ansi on;
+  #nop Set wimpy to flee at 50% health - critical for survival;
+  wimpy 50;
+  #nop Enable brief mode to reduce spam;
+  set brief on;
+  #nop Show exits in room descriptions;
+  set autoexit on
+}
+
+#nop
+#nop Combat variables - basic tracking without guild abilities
+#nop
+
+#variable {healthPoints} {0}
+#variable {maxHealth} {0}
+#variable {exp} {0}
+#variable {attacking} {0}
+#variable {autoAttack} {1}
+
+#nop
+#nop Basic corpse handling - no guild-specific processing
+#nop Just loot and leave, newbies can't process corpses
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Basic attack - no guild abilities, just kill command
+#nop
+
+#alias {attack} {
+  #send { kill %1 }
+}
+
+#nop
+#nop Health tracking from basic prompt
+#nop Newbie prompt format: HP: current/max
+#nop
+
+#action {HP: %d/%d} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #nop Warn if health is getting low;
+  #if { $hpPercent < 30 } {
+    #showme {<139>WARNING: Health low! Consider fleeing with 'wimpy' or 'retreat'<099>}
+  }
+} {6}
+
+#nop
+#nop Experience tracking
+#nop
+
+#action {Exp: %d} {
+  #variable {exp} {%1}
+} {6}
+
+#nop
+#nop Tutorial Helper Actions
+#nop These triggers help guide newbies through common tutorial steps
+#nop
+
+#action {You should type 'help newbie' for help} {
+  #showme {<129>TIP: Type 'help newbie' to see the newbie help guide<099>}
+} {5}
+
+#action {You can train your skills at various trainers} {
+  #showme {<129>TIP: Use 'gotoTrainer' alias to find Hand-to-Hand trainer<099>}
+} {5}
+
+#nop
+#nop Solaris (money) tracking
+#nop
+
+#action {You now have %d solaris} {
+  #variable {solaris} {%1}
+} {5}
+
+#action {You get %d solaris} {
+  #showme {<149>Got %1 solaris!<099>}
+} {5}
+
+#nop
+#nop Level up notification
+#nop
+
+#action {You have gained a level} {
+  #showme {<159>CONGRATULATIONS! You gained a level!<099>};
+  #showme {<129>TIP: Visit a trainer to improve your skills<099>}
+} {3}
+
+#action {You are now level %d} {
+  #variable {playerLevel} {%1};
+  #showme {<159>You are now level %1!<099>};
+  #if { %1 >= 5 } {
+    #showme {<129>TIP: You can now join a guild! Use 'guildLocations' to see options<099>}
+  }
+} {3}
+
+#nop
+#nop Death handling - newbies die a lot
+#nop
+
+#action {You have died} {
+  #variable {attacking} {0};
+  #showme {<119>You died! Don't worry, death is temporary.<099>};
+  #showme {<129>TIP: Type 'score' to check your stats, then find easier mobs<099>}
+} {2}
+
+#nop
+#nop Navigation Helpers - Getting to important newbie locations
+#nop
+
+#nop Caladan trainer locations
+#alias {gotoTrainer} {
+  #nop Hand-to-Hand trainer from Caladan AP;
+  #showme {<129>Going to Hand-to-Hand trainer (4w, s from Caladan AP)<099>};
+  #send {4w};
+  #send {s}
+}
+
+#alias {gotoFirstAid} {
+  #nop First Aid trainer from Caladan AP;
+  #showme {<129>Going to First Aid trainer (2e, n from Caladan AP)<099>};
+  #send {2e};
+  #send {n}
+}
+
+#alias {gotoBank} {
+  #nop Bank from Caladan AP;
+  #showme {<129>Going to Caladan Bank (2s from AP)<099>};
+  #send {2s}
+}
+
+#alias {gotoShop} {
+  #nop General shop from Caladan AP;
+  #showme {<129>Going to general shop (w, s from Caladan AP)<099>};
+  #send {w};
+  #send {s}
+}
+
+#nop
+#nop Guild Hall Locations - For when you're ready to join
+#nop
+
+#alias {guildLocations} {
+  #showme {<159>=== Guild Locations (Level 5+ required) ===<099>};
+  #showme {<149>Atreides<099>: Caladan - 4e, 2n from AP};
+  #showme {<149>Harkonnen<099>: Giedi Prime - 2w, n from AP};
+  #showme {<149>Fremen<099>: Arrakis - From AP: 5e, 8n, 2e, enter sietch};
+  #showme {<149>Tleilaxu<099>: Tleilax - n, nw, n, enter from AP};
+  #showme {<149>Bene Gesserit<099>: Wallach IX - 5n, w, n from AP};
+  #showme {<149>Sardaukar<099>: Salusa Secundus - n, board orni3};
+  #showme {<149>Fish Speakers<099>: Arrakis - s, enter palace from AP};
+  #showme {<149>Honored Matres<099>: Junction - board ship, destination matres};
+  #showme {<149>Ixian (IMG)<099>: Ix - Requires 100,000 solaris}
+}
+
+#nop
+#nop Newbie leveling areas by level range
+#nop
+
+#alias {levelingAreas} {
+  #showme {<159>=== Newbie Leveling Areas ===<099>};
+  #showme {<149>Level 1-5:<099>};
+  #showme {  Giedi Prime Infirmary: all e from GP AP};
+  #showme {  Wallach IX Orchard: 5n, enter from Wallach AP};
+  #showme {  Wallach IX Ward: e, e, down from Wallach AP};
+  #showme {  Tleilax West Area: start from Tleilax AP};
+  #showme {<149>Level 5-10:<099>};
+  #showme {  Caladan High School: 3w, n from Caladan AP};
+  #showme {  Arrakis Abandoned Sietch: w from Arrakis AP};
+  #showme {<149>Level 10-20:<099>};
+  #showme {  Caladan Forest Brigands: 6e, all n, 2w, squeeze};
+  #showme {  Caladan Smugglers Cave: all w, climb down, move bush (need torch)}
+}
+
+#nop
+#nop Basic survival commands
+#nop
+
+#alias {heal} {
+  #showme {<129>Newbies have no healing abilities. Options:<099>};
+  #showme {  - Rest: Type 'rest' to slowly regenerate};
+  #showme {  - First Aid: Train at trainer, then use 'first aid'};
+  #showme {  - Medikits: Buy from shops or find in loot};
+  #showme {  - Flee: 'wimpy 50' auto-flees, or type 'retreat'}
+}
+
+#alias {checkStats} {
+  score;
+  #delay {1} {
+    #showme {<129>TIP: 'skills' shows trainable skills, 'eq' shows equipment<099>}
+  }
+}
+
+#nop
+#nop Equipment management
+#nop
+
+#alias {gearUp} {
+  #nop Wear all carried equipment;
+  wear all;
+  wield all
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {newbieHelp} {
+  #showme {<159>=== Newbie Quick Reference ===<099>};
+  #showme {<149>Setup:<099> setupNewbie - Configure game settings};
+  #showme {<149>Combat:<099> kill <mob> - Attack a monster};
+  #showme {<149>Movement:<099> n/s/e/w/u/d - Move around};
+  #showme {<149>Info:<099> look, score, skills, eq, inv};
+  #showme {<149>Safety:<099> wimpy 50, retreat, rest};
+  #showme {};
+  #showme {<149>Navigation Aliases:<099>};
+  #showme {  gotoTrainer - Hand-to-Hand trainer};
+  #showme {  gotoFirstAid - First Aid trainer};
+  #showme {  gotoBank - Caladan bank};
+  #showme {  gotoShop - General shop};
+  #showme {};
+  #showme {<149>Planning:<099>};
+  #showme {  guildLocations - Show all guild halls};
+  #showme {  levelingAreas - Show newbie zones by level}
+}
+
+#nop
+#nop Startup message
+#nop
+
+#showme {<159>Newbie helper loaded! Type 'newbieHelp' for commands.<099>}
+

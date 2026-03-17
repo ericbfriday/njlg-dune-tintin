@@ -1,0 +1,296 @@
+#nop
+#nop Honored Matres Settings - Intensity and Forms Combat Guild
+#nop Strengths: Intensity system, combat forms, dragonstrike, soostones
+#nop Corpse: analyze corpse for intelligence
+#nop Location: Junction - board ship, destination matres
+#nop
+
+set mprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useIntensity} {1}
+#variable {useForms} {1}
+#variable {useDragonstrike} {1}
+#variable {guildLevel} {0}
+#variable {intensity} {0}
+#variable {maxIntensity} {100}
+#variable {currentForm} {relaxed}
+#variable {soostoneCount} {0}
+
+#nop
+#nop Intensity System - Honored Matres core mechanic
+#nop Intensity builds during combat, unlocks abilities at thresholds
+#nop Key threshold: 70% - enables most powerful abilities
+#nop Intensity decays when out of combat
+#nop
+
+#action {Intensity: %d%*} {
+  #variable {intensity} {%1};
+  #if { %1 >= 70 } {
+    #showme {<119>INTENSITY 70%+ - Full power available!<099>}
+  };
+  #if { %1 >= 90 } {
+    #showme {<159>INTENSITY CRITICAL - Maximum damage!<099>}
+  }
+} {5}
+
+#alias {checkIntensity} {
+  #showme {<149>Current Intensity: $intensity%<099>};
+  #if { $intensity >= 70 } {
+    #showme {<119>Full power abilities AVAILABLE<099>}
+  } {
+    #showme {<129>Build more intensity for full power<099>}
+  }
+}
+
+#nop
+#nop Combat Forms - Different fighting stances
+#nop Flurry - Fast attacks, lower damage per hit
+#nop Resheph - Balanced combat form
+#nop Relaxed - Default, conserves energy
+#nop Katahzirui - Maximum damage form (requires high intensity)
+#nop
+
+#alias {formFlurry} {
+  form flurry;
+  #variable {currentForm} {flurry};
+  #showme {<149>Switched to Flurry form (speed)<099>}
+}
+
+#alias {formResheph} {
+  form resheph;
+  #variable {currentForm} {resheph};
+  #showme {<149>Switched to Resheph form (balanced)<099>}
+}
+
+#alias {formRelaxed} {
+  form relaxed;
+  #variable {currentForm} {relaxed};
+  #showme {<129>Switched to Relaxed form (resting)<099>}
+}
+
+#alias {formKatahzirui} {
+  #if { $intensity >= 70 } {
+    form katahzirui;
+    #variable {currentForm} {katahzirui};
+    #showme {<119>Switched to KATAHZIRUI form (maximum damage)!<099>}
+  } {
+    #showme {<119>Need 70%+ intensity for Katahzirui form!<099>}
+  }
+}
+
+#nop
+#nop Dragonstrike - Powerful finishing move
+#nop Requires high intensity for maximum effectiveness
+#nop
+
+#alias {dragonstrike} {
+  #if { $intensity >= 50 } {
+    dragonstrike %1;
+    #showme {<119>DRAGONSTRIKE!<099>}
+  } {
+    #showme {<129>Dragonstrike more effective with higher intensity<099>};
+    dragonstrike %1
+  }
+}
+
+#nop
+#nop Soostones - Power enhancing gems
+#nop Collected from special sources, boost abilities
+#nop
+
+#alias {useSoostone} {
+  #if { $soostoneCount > 0 } {
+    use soostone;
+    #math {soostoneCount} { $soostoneCount - 1 };
+    #showme {<159>Soostone activated! ($soostoneCount remaining)<099>}
+  } {
+    #showme {<119>No soostones available!<099>}
+  }
+}
+
+#action {You obtain a soostone} {
+  #math {soostoneCount} { $soostoneCount + 1 };
+  #showme {<159>Soostone obtained! (Total: $soostoneCount)<099>}
+} {4}
+
+#nop
+#nop Attack sequence - Honored Matres intensity-based combat
+#nop
+
+#alias {attack} {
+  #if { $useForms == 1 } {
+    #if { $intensity >= 70 } {
+      #if { "$currentForm" != "katahzirui" } {
+        formKatahzirui
+      }
+    } {
+      #if { "$currentForm" == "relaxed" } {
+        formResheph
+      }
+    }
+  };
+  #if { $useDragonstrike == 1 } {
+    #if { $intensity >= 70 } {
+      dragonstrike %1
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Corpse handling - Honored Matres analyze corpses
+#nop analyze corpse provides intelligence/information
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  analyze corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#nop
+#nop Manipulation abilities - Social/mental control
+#nop
+
+#alias {manipulate} {
+  manipulate %1
+}
+
+#alias {seduce} {
+  seduce %1
+}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Combat feedback triggers
+#nop
+
+#action {Your intensity rises} {
+  #showme {<149>Intensity building...<099>}
+} {6}
+
+#action {You enter the %w form} {
+  #variable {currentForm} {%1};
+  #showme {<149>Now in %1 form<099>}
+} {5}
+
+#action {Your dragonstrike hits with devastating force} {
+  #showme {<119>DRAGONSTRIKE CRITICAL!<099>}
+} {4}
+
+#action {Your intensity begins to fade} {
+  #showme {<129>Intensity decaying - return to combat<099>}
+} {5}
+
+#nop
+#nop Health tracking with form management
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #nop Switch to defensive form if health critical;
+  #if { $hpPercent < 25 } {
+    #if { "$currentForm" == "katahzirui" } {
+      formResheph
+    }
+  }
+} {6}
+
+#nop
+#nop Navigation - Getting to Honored Matres areas
+#nop Guild hall: Junction - board ship, destination matres
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Honored Matres Guild from Junction;
+  #showme {<159>Going to Honored Matres chapter house<099>};
+  #send {board ship};
+  #send {destination matres}
+}
+
+#alias {gotoJunction} {
+  #nop Junction is the Honored Matres home planet;
+  #showme {<159>Travel to Junction for Honored Matres content<099>}
+}
+
+#nop
+#nop Quick form switching
+#nop
+
+#alias {speedForm} {
+  formFlurry
+}
+
+#alias {balanceForm} {
+  formResheph
+}
+
+#alias {restForm} {
+  formRelaxed
+}
+
+#alias {maxForm} {
+  formKatahzirui
+}
+
+#nop
+#nop Honored Matres status display
+#nop
+
+#alias {hmStatus} {
+  #showme {<159>=== Honored Matres Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Intensity: $intensity / $maxIntensity};
+  #showme {Current Form: $currentForm};
+  #showme {Soostones: $soostoneCount};
+  #showme {Auto Intensity: $useIntensity (1=on)};
+  #showme {Auto Forms: $useForms (1=on)};
+  #showme {Auto Dragonstrike: $useDragonstrike (1=on)}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {hmHelp} {
+  #showme {<159>=== Honored Matres Quick Reference ===<099>};
+  #showme {<149>Combat Forms:<099>};
+  #showme {  formFlurry - Fast attack form};
+  #showme {  formResheph - Balanced combat form};
+  #showme {  formRelaxed - Resting/recovery form};
+  #showme {  formKatahzirui - Maximum damage (70%+ intensity)};
+  #showme {<149>Combat:<099>};
+  #showme {  dragonstrike <target> - Powerful finisher};
+  #showme {  attack <target> - Full attack sequence};
+  #showme {  checkIntensity - Show intensity status};
+  #showme {<149>Special:<099>};
+  #showme {  useSoostone - Activate power boost};
+  #showme {  manipulate <target> - Social manipulation};
+  #showme {  seduce <target> - Seduction ability};
+  #showme {<149>Quick Forms:<099>};
+  #showme {  speedForm / balanceForm / restForm / maxForm};
+  #showme {<149>Settings:<099>};
+  #showme {  useIntensity - Track intensity (0/1)};
+  #showme {  useForms - Auto form switching (0/1)};
+  #showme {  useDragonstrike - Auto dragonstrike (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - Chapter house};
+  #showme {  hmStatus - Show current status}
+}
+
+#showme {<159>Honored Matres guild loaded! Type 'hmHelp' for commands.<099>}
+

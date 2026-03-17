@@ -1,0 +1,317 @@
+#nop
+#nop Ixian (IMG) Settings - Cybernetic Technology Guild
+#nop Strengths: Implants, energy management, technological abilities
+#nop Corpse: salvage corpse for components
+#nop Location: Ix - Requires 100,000 solaris to join
+#nop Note: IMG = Ixian Machine Guild
+#nop
+
+set iprompt on
+
+#nop
+#nop Combat variables
+#nop
+
+#variable {useImplants} {1}
+#variable {useEnergyWeapons} {1}
+#variable {autoRecharge} {1}
+#variable {guildLevel} {0}
+#variable {energyLevel} {0}
+#variable {maxEnergy} {100}
+#variable {batteryCharge} {0}
+#variable {implantCount} {0}
+
+#nop
+#nop Energy System - Ixian core resource
+#nop Energy powers all implants and tech abilities
+#nop Recharge at guild or using battery packs
+#nop
+
+#action {Energy: %d/%d} {
+  #variable {energyLevel} {%1};
+  #variable {maxEnergy} {%2};
+  #if { %1 < 20 } {
+    #showme {<119>WARNING: Energy critically low!<099>}
+  }
+} {5}
+
+#alias {checkEnergy} {
+  #showme {<149>Energy: $energyLevel / $maxEnergy<099>};
+  #showme {<149>Battery Charge: $batteryCharge<099>}
+}
+
+#alias {rechargeEnergy} {
+  #if { $batteryCharge > 0 } {
+    use battery;
+    #showme {<149>Recharging from battery...<099>}
+  } {
+    #showme {<119>No battery charge! Visit guild to recharge.<099>}
+  }
+}
+
+#nop
+#nop Implant System - Cybernetic enhancements
+#nop Different implants provide different abilities
+#nop Implants require energy to operate
+#nop
+
+#alias {activateImplant} {
+  #if { $energyLevel > 10 } {
+    activate %1;
+    #showme {<149>Activating implant: %1<099>}
+  } {
+    #showme {<119>Insufficient energy for implant!<099>}
+  }
+}
+
+#alias {deactivateImplant} {
+  deactivate %1;
+  #showme {<129>Deactivating implant: %1<099>}
+}
+
+#alias {listImplants} {
+  implants;
+  #showme {<149>Listing installed implants...<099>}
+}
+
+#nop
+#nop Energy Weapons - Tech-based combat
+#nop
+
+#alias {laserBlast} {
+  #if { $energyLevel > 15 } {
+    laser %1;
+    #showme {<119>Firing laser!<099>}
+  } {
+    #showme {<129>Insufficient energy for laser<099>}
+  }
+}
+
+#alias {stunPulse} {
+  #if { $energyLevel > 20 } {
+    stun %1;
+    #showme {<149>Stun pulse fired!<099>}
+  } {
+    #showme {<129>Insufficient energy for stun<099>}
+  }
+}
+
+#alias {shieldBoost} {
+  #if { $energyLevel > 25 } {
+    boost shield;
+    #showme {<159>Shield boosted!<099>}
+  } {
+    #showme {<129>Insufficient energy for shield boost<099>}
+  }
+}
+
+#nop
+#nop Attack sequence - Ixian tech-based combat
+#nop
+
+#alias {attack} {
+  #if { $useEnergyWeapons == 1 } {
+    #if { $energyLevel > 15 } {
+      laserBlast %1
+    }
+  };
+  #if { $useImplants == 1 } {
+    #if { $energyLevel > 20 } {
+      stunPulse %1
+    }
+  };
+  #send { kill %1 }
+}
+
+#nop
+#nop Corpse handling - Ixians salvage corpses for components
+#nop Components used for crafting and upgrades
+#nop
+
+#alias {handleCorpse} {
+  #untick {takeall};
+  get all from corpse;
+  salvage corpse;
+  #ticker {takeall} { takeall } {2}
+}
+
+#action {You salvage %d component%* from the corpse} {
+  #showme {<149>Salvaged %1 components!<099>}
+} {5}
+
+#nop
+#nop Auto-recharge when energy critical
+#nop
+
+#action {Energy: %d/%d %*} {
+  #variable {energyLevel} {%1};
+  #if { $autoRecharge == 1 } {
+    #if { %1 < 15 } {
+      rechargeEnergy
+    }
+  }
+} {6}
+
+#nop
+#nop Battery management
+#nop
+
+#action {Battery charge: %d} {
+  #variable {batteryCharge} {%1}
+} {5}
+
+#action {Your battery is depleted} {
+  #variable {batteryCharge} {0};
+  #showme {<119>Battery EMPTY!<099>}
+} {4}
+
+#alias {rechargeBattery} {
+  #showme {<129>Recharging battery at guild...<099>};
+  recharge battery
+}
+
+#nop
+#nop Guild level tracking
+#nop
+
+#action {GL: %d} {
+  #variable {guildLevel} {%1}
+} {6}
+
+#nop
+#nop Combat feedback triggers
+#nop
+
+#action {Your laser beam strikes %*} {
+  #showme {<119>Laser hit!<099>}
+} {5}
+
+#action {Your implant %w activates} {
+  #showme {<149>Implant %1 online<099>}
+} {5}
+
+#action {Your shield absorbs the damage} {
+  #showme {<159>Shield absorbed damage!<099>}
+} {5}
+
+#action {Implant malfunction} {
+  #showme {<119>IMPLANT MALFUNCTION! Visit guild for repairs.<099>}
+} {3}
+
+#nop
+#nop Health tracking
+#nop
+
+#action {HP: %d/%d %*} {
+  #variable {healthPoints} {%1};
+  #variable {maxHealth} {%2};
+  #math {hpPercent} {(%1 / %2) * 100};
+  #nop Boost shields when hurt;
+  #if { $hpPercent < 40 } {
+    #if { $energyLevel > 25 } {
+      shieldBoost
+    }
+  }
+} {6}
+
+#nop
+#nop Navigation - Getting to Ixian areas
+#nop Guild hall: Ix - e, 14n, w from Ix AP
+#nop Note: Requires 100,000 solaris to join
+#nop
+
+#alias {gotoGuildHall} {
+  #nop Ixian Guild Hall (URC) from Ix AP;
+  #showme {<149>Going to Ixian Machine Guild (URC)<099>};
+  #send {e};
+  #send {14n};
+  #send {w}
+}
+
+#alias {gotoIxTower} {
+  #nop Ix Tower from Ix AP;
+  #showme {<149>Going to Ix Tower<099>};
+  #send {e};
+  #send {n};
+  #send {e};
+  #send {e};
+  #send {enter}
+}
+
+#alias {gotoWorkshop} {
+  #nop Workshop for crafting and upgrades;
+  #showme {<149>Going to Ixian Workshop<099>};
+  workshop
+}
+
+#nop
+#nop Crafting and upgrades
+#nop
+
+#alias {craftImplant} {
+  craft %1;
+  #showme {<149>Attempting to craft: %1<099>}
+}
+
+#alias {upgradeImplant} {
+  upgrade %1;
+  #showme {<149>Upgrading implant: %1<099>}
+}
+
+#alias {repairImplants} {
+  repair all;
+  #showme {<149>Repairing all implants...<099>}
+}
+
+#nop
+#nop Ixian status display
+#nop
+
+#alias {ixStatus} {
+  #showme {<149>=== Ixian (IMG) Status ===<099>};
+  #showme {Guild Level: $guildLevel};
+  #showme {Energy: $energyLevel / $maxEnergy};
+  #showme {Battery Charge: $batteryCharge};
+  #showme {Implants: $implantCount};
+  #showme {Auto Implants: $useImplants (1=on)};
+  #showme {Energy Weapons: $useEnergyWeapons (1=on)};
+  #showme {Auto Recharge: $autoRecharge (1=on)}
+}
+
+#nop
+#nop Quick reference
+#nop
+
+#alias {ixHelp} {
+  #showme {<149>=== Ixian (IMG) Quick Reference ===<099>};
+  #showme {<149>Energy Weapons:<099>};
+  #showme {  laserBlast <target> - Fire laser (15 energy)};
+  #showme {  stunPulse <target> - Stun attack (20 energy)};
+  #showme {  shieldBoost - Boost shields (25 energy)};
+  #showme {<149>Implants:<099>};
+  #showme {  activateImplant <name> - Turn on implant};
+  #showme {  deactivateImplant <name> - Turn off implant};
+  #showme {  listImplants - Show installed implants};
+  #showme {<149>Energy:<099>};
+  #showme {  checkEnergy - Show energy status};
+  #showme {  rechargeEnergy - Use battery to recharge};
+  #showme {  rechargeBattery - Recharge battery at guild};
+  #showme {<149>Crafting:<099>};
+  #showme {  craftImplant <type> - Create new implant};
+  #showme {  upgradeImplant <name> - Upgrade implant};
+  #showme {  repairImplants - Repair all implants};
+  #showme {<149>Settings:<099>};
+  #showme {  useImplants - Auto implant use (0/1)};
+  #showme {  useEnergyWeapons - Auto weapons (0/1)};
+  #showme {  autoRecharge - Auto battery use (0/1)};
+  #showme {<149>Navigation:<099>};
+  #showme {  gotoGuildHall - URC guild hall};
+  #showme {  gotoIxTower - Ix Tower};
+  #showme {  ixStatus - Show current status};
+  #showme {};
+  #showme {<119>NOTE: Joining IMG requires 100,000 solaris!<099>}
+}
+
+#showme {<149>Ixian (IMG) guild loaded! Type 'ixHelp' for commands.<099>}
+#showme {<129>Remember: 100,000 solaris required to join this guild.<099>}
+

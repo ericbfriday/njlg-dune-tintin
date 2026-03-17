@@ -1,31 +1,200 @@
+#nop
+#nop Mob Definitions
+#nop These two lists MUST be kept in sync - same index = same mob
+#nop mobs = full names for pattern matching in room descriptions
+#nop mobsShortnames = short names for attack commands
+#nop
+
+#nop
+#nop General Newbie Mobs (multiple areas)
+#nop
+
 #list {mobs} {create}
     {Desert Bat}
     {Devil}
     {Eye in a jar}
+    {Mouse}
+    {Snake}
+    {Rat}
+    {Spider}
+
+#nop
+#nop Harkonnen Areas (Giedi Prime)
+#nop
+
     {Harkonnen functionary}
     {Harkonnen worker}
     {Harkonnen private}
     {Harkonnen recruiter}
     {Harkonnen soldier}
+    {Harkonnen guard}
+    {Harkonnen sergeant}
+
+#nop
+#nop Tleilaxu Areas
+#nop
+
     {Hideous Ghola}
-    {Mouse}
     {Newbie ninja}
     {Newbie ninja master}
     {Newbie ninja death commando}
-    {Snake};
+    {Face Dancer}
+    {Tleilaxu Master}
+
+#nop
+#nop Caladan Areas (Atreides)
+#nop
+
+    {Forest brigand}
+    {Smuggler}
+    {Castle guard}
+    {Student}
+    {Teacher}
+    {Atreides guard}
+    {Atreides soldier}
+    {Fisherman}
+
+#nop
+#nop Medical/Hospital Mobs (GP Infirmary, etc)
+#nop
+
+    {Patient}
+    {Nurse}
+    {Orderly}
+    {Doctor}
+    {Wounded soldier}
+
+#nop
+#nop Wallach IX Mobs (Bene Gesserit)
+#nop
+
+    {Acolyte}
+    {Sister}
+    {Reverend Mother}
+    {Orchard worker}
+    {Gardener}
+
+#nop
+#nop Arrakis Mobs (Fremen, Fish Speakers)
+#nop
+
+    {Fremen warrior}
+    {Fremen scout}
+    {Desert bandit}
+    {Spice smuggler}
+    {Sandworm}
+    {Fish Speaker}
+    {Palace guard}
+
+#nop
+#nop Salusa Secundus Mobs (Sardaukar)
+#nop
+
+    {Sardaukar trainee}
+    {Sardaukar soldier}
+    {Sardaukar veteran}
+    {Prison guard}
+    {Prisoner}
+
+#nop
+#nop Ix Mobs (Ixian)
+#nop
+
+    {Ixian technician}
+    {Ixian worker}
+    {Security drone}
+    {Maintenance bot}
+    {Factory worker}
+
+#nop
+#nop Junction/Matres Mobs (Honored Matres)
+#nop
+
+    {Honored Matre}
+    {Matre acolyte}
+    {Junction guard}
+    {Slave};
+
+#nop
+#nop Shortnames List - MUST match order of mobs list above
+#nop
 
 #list {mobsShortnames} {create}
     {bat}
     {devil}
     {eye}
+    {mouse}
+    {snake}
+    {rat}
+    {spider}
+
+#nop Harkonnen
     {functionary}
     {worker}
     {private}
     {recruiter}
     {soldier}
+    {guard}
+    {sergeant}
+
+#nop Tleilaxu
     {ghola}
-    {mouse}
     {ninja}
     {master}
     {commando}
-    {snake};
+    {dancer}
+    {tleilaxu}
+
+#nop Caladan
+    {brigand}
+    {smuggler}
+    {guard}
+    {student}
+    {teacher}
+    {guard}
+    {soldier}
+    {fisherman}
+
+#nop Medical
+    {patient}
+    {nurse}
+    {orderly}
+    {doctor}
+    {wounded}
+
+#nop Wallach IX
+    {acolyte}
+    {sister}
+    {mother}
+    {worker}
+    {gardener}
+
+#nop Arrakis
+    {fremen}
+    {scout}
+    {bandit}
+    {smuggler}
+    {worm}
+    {speaker}
+    {guard}
+
+#nop Salusa
+    {trainee}
+    {soldier}
+    {veteran}
+    {guard}
+    {prisoner}
+
+#nop Ix
+    {technician}
+    {worker}
+    {drone}
+    {bot}
+    {worker}
+
+#nop Junction/Matres
+    {matre}
+    {acolyte}
+    {guard}
+    {slave};
+
